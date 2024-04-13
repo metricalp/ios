@@ -1,6 +1,6 @@
 import Foundation
 
-class Metricalp {
+public class Metricalp {
     static let shared = Metricalp()
     
     static let API_ENDPOINT = "https://event.metricalp.com"
