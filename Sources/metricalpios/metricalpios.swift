@@ -1,9 +1,9 @@
 import Foundation
 
 public class Metricalp {
-    static let shared = Metricalp()
+    public static let shared = Metricalp()
     
-    static let API_ENDPOINT = "https://event.metricalp.com"
+    public static let API_ENDPOINT = "https://event.metricalp.com"
     var attributes: [String: String]?
     
     private init() {}
@@ -58,7 +58,7 @@ public class Metricalp {
         // CFRunLoopRun()
     }
     
-    static func initMetricalp(attributes: [String: String], initialScreen: String?) -> Bool {
+    public static func initMetricalp(attributes: [String: String], initialScreen: String?) -> Bool {
         if shared.attributes == nil {
             var attrs = attributes
             attrs["metr_collected_via"] = "ios"
@@ -82,20 +82,20 @@ public class Metricalp {
         self.attributes = attributes
     }
     
-    static func resetAttributes(_ attributes: [String: String]?) {
+    public static func resetAttributes(_ attributes: [String: String]?) {
         shared.setAttributes(attributes)
     }
     
-    static func updateAttributes(_ attributes: [String: String]?) {
+    public static func updateAttributes(_ attributes: [String: String]?) {
         guard let attributes = attributes else { return }
         shared.attributes?.merge(attributes) { (_, new) in new }
     }
     
-    static func getAllAttributes() -> [String: String]? {
+    public static func getAllAttributes() -> [String: String]? {
         return shared.getAttributes()
     }
     
-    static func sendEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func sendEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
         guard let instance = getAllAttributes() else { return false }
         var body = instance
         
@@ -134,7 +134,7 @@ public class Metricalp {
         return true
     }
     
-    static func screenViewEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func screenViewEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
         var attrs = ["path": path]
         if let eventAttributes = eventAttributes {
             attrs.merge(eventAttributes) { (_, new) in new }
@@ -142,7 +142,7 @@ public class Metricalp {
         return sendEvent(type: "screen_view", eventAttributes: attrs, overrideAttributes: overrideAttributes)
     }
     
-    static func sessionExitEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func sessionExitEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
         var attrs = ["path": path]
         if let eventAttributes = eventAttributes {
             attrs.merge(eventAttributes) { (_, new) in new }
@@ -150,7 +150,7 @@ public class Metricalp {
         return sendEvent(type: "session_exit", eventAttributes: attrs, overrideAttributes: overrideAttributes)
     }
     
-    static func customEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func customEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
         return sendEvent(type: type, eventAttributes: eventAttributes, overrideAttributes: overrideAttributes)
     }
 }
