@@ -31,7 +31,7 @@ public class Metricalp {
         do {
             // convert parameters to Data and assign dictionary to httpBody of request
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-        } catch let error {
+        } catch _ {
             return
         }
         
@@ -39,7 +39,7 @@ public class Metricalp {
         // create dataTask using the session object to send data to the server
         let task = session.dataTask(with: request) { data, response, error in
             
-            if let error = error {
+            if let _ = error {
                 return
             }
             
@@ -58,7 +58,7 @@ public class Metricalp {
         // CFRunLoopRun()
     }
     
-    public static func initMetricalp(attributes: [String: String], initialScreen: String?) -> Bool {
+    public static func initMetricalp(attributes: [String: String], initialScreen: String?) {
         if shared.attributes == nil {
             var attrs = attributes
             attrs["metr_collected_via"] = "ios"
@@ -67,11 +67,10 @@ public class Metricalp {
             shared.setAttributes(attrs)
             
             guard initialScreen != nil else {
-                return true
+                return
             }
-            return screenViewEvent(path: initialScreen!, eventAttributes: nil, overrideAttributes: nil)
+            screenViewEvent(path: initialScreen!, eventAttributes: nil, overrideAttributes: nil)
         }
-        return true
     }
     
     func getAttributes() -> [String: String]? {
@@ -95,8 +94,8 @@ public class Metricalp {
         return shared.getAttributes()
     }
     
-    public static func sendEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
-        guard let instance = getAllAttributes() else { return false }
+    public static func sendEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
+        guard let instance = getAllAttributes() else { return }
         var body = instance
         
         if let overrideAttributes = overrideAttributes {
@@ -131,26 +130,25 @@ public class Metricalp {
         
         shared.postRequest(parameters: body, address: apiUrl)
         
-        return true
     }
     
-    public static func screenViewEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func screenViewEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
         var attrs = ["path": path]
         if let eventAttributes = eventAttributes {
             attrs.merge(eventAttributes) { (_, new) in new }
         }
-        return sendEvent(type: "screen_view", eventAttributes: attrs, overrideAttributes: overrideAttributes)
+        sendEvent(type: "screen_view", eventAttributes: attrs, overrideAttributes: overrideAttributes)
     }
     
-    public static func sessionExitEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
+    public static func sessionExitEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
         var attrs = ["path": path]
         if let eventAttributes = eventAttributes {
             attrs.merge(eventAttributes) { (_, new) in new }
         }
-        return sendEvent(type: "session_exit", eventAttributes: attrs, overrideAttributes: overrideAttributes)
+        sendEvent(type: "session_exit", eventAttributes: attrs, overrideAttributes: overrideAttributes)
     }
     
-    public static func customEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) -> Bool {
-        return sendEvent(type: type, eventAttributes: eventAttributes, overrideAttributes: overrideAttributes)
+    public static func customEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
+        sendEvent(type: type, eventAttributes: eventAttributes, overrideAttributes: overrideAttributes)
     }
 }
