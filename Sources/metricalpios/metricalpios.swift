@@ -5,6 +5,8 @@ public class Metricalp {
     
     public static let API_ENDPOINT = "https://event.metricalp.com"
     var attributes: [String: String]?
+    var screenDurationStartPoint = Metricalp.currentTimeInMilliSeconds()
+    var currentScreen: String? = nil;
     
     private init() {}
     
@@ -12,6 +14,12 @@ public class Metricalp {
     func getOSInfo()->String {
         let os = ProcessInfo.processInfo.operatingSystemVersion
         return String(os.majorVersion) + "." + String(os.minorVersion) + "." + String(os.patchVersion)
+    }
+    
+    static func currentTimeInMilliSeconds()-> Int {
+            let currentDate = Date()
+            let since1970 = currentDate.timeIntervalSince1970
+            return Int(since1970 * 1000)
     }
     
     func postRequest(parameters: [String: String], address: String) {
@@ -58,7 +66,7 @@ public class Metricalp {
         // CFRunLoopRun()
     }
     
-    public static func initMetricalp(attributes: [String: String], initialScreen: String?) {
+    public static func initMetricalp(attributes: [String: String], initialScreen: String?, eventAttributes: [String: String]?) {
         if shared.attributes == nil {
             var attrs = attributes
             attrs["metr_collected_via"] = "ios"
@@ -69,7 +77,7 @@ public class Metricalp {
             guard initialScreen != nil else {
                 return
             }
-            screenViewEvent(path: initialScreen!, eventAttributes: nil, overrideAttributes: nil)
+            screenViewEvent(path: initialScreen!, eventAttributes: eventAttributes, overrideAttributes: nil)
         }
     }
     
@@ -94,6 +102,22 @@ public class Metricalp {
         return shared.getAttributes()
     }
     
+    public static func getCurrentScreen() -> String? {
+        return shared.currentScreen
+    }
+    
+    public static func setCurrentScreen(screen: String?) {
+        shared.currentScreen = screen
+    }
+    
+    public static func getScreenDurationStartPoint() -> Int {
+        return shared.screenDurationStartPoint
+    }
+    
+    public static func setScreenDurationStartPoint(duration: Int) {
+        shared.screenDurationStartPoint = duration
+    }
+    
     public static func sendEvent(type: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
         guard let instance = getAllAttributes() else { return }
         var body = instance
@@ -106,13 +130,12 @@ public class Metricalp {
             fatalError("Metricalp: tid is missing in attributes")
         }
         
-        if body["metr_bypass_ip"] != nil && body["metr_unique_identifier"] == nil {
-            fatalError("Metricalp: when metr_bypass_ip is true, metr_unique_identifier must be set.")
+        guard let _ = body["metr_unique_identifier"] else {
+            fatalError("Metricalp: metr_unique_identifier is missing in attributes")
         }
         
         if let eventAttributes = eventAttributes {
             body.merge(eventAttributes) { (_, new) in new }
-            body["path"] = eventAttributes["path"] ?? "(not-set)"
         }
         
         body["type"] = type
@@ -121,8 +144,14 @@ public class Metricalp {
             body["metr_user_language"] = "unknown-unknown"
         }
         
-        if body["metr_unique_identifier"] == nil {
-            body["metr_unique_identifier"] = ""
+        if body["path"] == nil {
+            body["path"] = "(not-set)"
+        }
+        
+        if body["metr_bypass_ip"] == "disable" {
+            body["metr_bypass_ip"] = nil
+        } else {
+            body["metr_bypass_ip"] = "enable"
         }
         
         let apiUrl = instance["endpoint"] ?? API_ENDPOINT
@@ -133,13 +162,48 @@ public class Metricalp {
     }
     
     public static func screenViewEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
+        let prevScreen = Metricalp.getCurrentScreen()
         var attrs = ["path": path]
+        
+        var screenLeaveAttrs: [String: String] = [:]
+        
+        if (prevScreen != nil) {
+            screenLeaveAttrs["leave_from_path"] = prevScreen
+            screenLeaveAttrs["leave_from_duration"] = String(Metricalp.currentTimeInMilliSeconds() - Metricalp.getScreenDurationStartPoint())
+        }
+        
+        attrs.merge(screenLeaveAttrs) { (_, new) in new }
+        
         if let eventAttributes = eventAttributes {
             attrs.merge(eventAttributes) { (_, new) in new }
         }
+        
+        Metricalp.setCurrentScreen(screen: path)
+        Metricalp.setScreenDurationStartPoint(duration: Metricalp.currentTimeInMilliSeconds())
+        
         sendEvent(type: "screen_view", eventAttributes: attrs, overrideAttributes: overrideAttributes)
     }
     
+    public static func appLeaveEvent(eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
+        var attrs: [String: String] = [:]
+        let prevPath = Metricalp.getCurrentScreen()
+        if (prevPath == nil) {
+            return
+        }
+        let screenDuration = Metricalp.currentTimeInMilliSeconds() - Metricalp.getScreenDurationStartPoint()
+        Metricalp.setScreenDurationStartPoint(duration: Metricalp.currentTimeInMilliSeconds())
+        Metricalp.setCurrentScreen(screen: nil)
+        
+        attrs["path"] = prevPath
+        attrs["screen_duration"] = String(screenDuration)
+        
+        if let eventAttributes = eventAttributes {
+            attrs.merge(eventAttributes) { (_, new) in new }
+        }
+        sendEvent(type: "screen_leave", eventAttributes: attrs, overrideAttributes: overrideAttributes)
+    }
+    
+    // Deprecated no more manual session exit event triggers
     public static func sessionExitEvent(path: String, eventAttributes: [String: String]?, overrideAttributes: [String: String]?) {
         var attrs = ["path": path]
         if let eventAttributes = eventAttributes {
